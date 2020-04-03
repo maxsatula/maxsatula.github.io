@@ -16,7 +16,7 @@
          :recursive t
          :publishing-function org-html-publish-to-html
          :html-head-include-default-style nil
-         :html-htmlized-css-url "http://gongzhitaao.org/orgcss/org.css")
+         :html-htmlized-css-url "https://gongzhitaao.org/orgcss/org.css")
         ("images"
          :base-directory "images"
          :publishing-directory "../html/images"
