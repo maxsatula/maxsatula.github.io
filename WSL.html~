@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2020-04-03 Fri 15:32 -->
+<!-- 2020-04-03 Fri 15:00 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Windows Subsystem on Linux</title>
@@ -66,7 +66,7 @@ for the JavaScript code in this tag.
 <li><a href="#org1687433">2. Turn on WSL feature</a></li>
 <li><a href="#orgf3a4000">3. Ubuntu App Installation</a></li>
 <li><a href="#orgacd4440">4. Ubuntu First Run</a></li>
-<li><a href="#org1b28748">5. Better terminal experience alternatives</a></li>
+<li><a href="#org742b357">5. Better terminal experience with <b>wsltty</b></a></li>
 </ul>
 </div>
 </div>
@@ -194,23 +194,11 @@ See "man sudo_root" for details.
 </div>
 </div>
 
-<div id="outline-container-org1b28748" class="outline-2">
-<h2 id="org1b28748"><span class="section-number-2">5</span> Better terminal experience alternatives</h2>
+<div id="outline-container-org742b357" class="outline-2">
+<h2 id="org742b357"><span class="section-number-2">5</span> Better terminal experience with <b>wsltty</b></h2>
 <div class="outline-text-2" id="text-5">
 <p>
-You may optionally choose one of the following:
-</p>
-
-<p>
-WSLtty  <a href="https://github.com/mintty/wsltty/releases">https://github.com/mintty/wsltty/releases</a>
-</p>
-
-<p>
-Windows Terminal <a href="https://www.microsoft.com/en-us/p/windows-terminal-preview/9n0dx20hk701">https://www.microsoft.com/en-us/p/windows-terminal-preview/9n0dx20hk701</a>
-</p>
-
-<p>
-Hyper <a href="https://hyper.is/">https://hyper.is/</a>
+Download and install <a href="https://github.com/mintty/wsltty/releases">https://github.com/mintty/wsltty/releases</a>
 </p>
 </div>
 </div>
