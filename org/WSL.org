@@ -1,0 +1,68 @@
+#+TITLE: Windows Subsystem on Linux
+
+* Check Windows version
+
+  Right click on *Start* and Select *System*
+
+  [[./images/start-system.png]]
+
+  Then scroll down to see the version.
+
+  [[./images/windows-version.png]]
+
+  Version 1803 or above is fine.
+
+  If it is not, go to https://www.microsoft.com/en-us/software-download/windows10
+
+  [[./images/download-windows-10.png]]
+
+  or use Windows Update.
+
+* Turn on WSL feature
+
+  This step requires administrator access.
+
+  Type /"features"/ in *Start* menu, then select *Turn Windows features on or off*
+
+  [[./images/turn-windows-features.png]]
+
+  Select *Windows Subsystem for Linux*
+
+  [[./images/windows-subsystem-for-linux.png]]
+
+* Ubuntu App Installation
+
+  Type /"ubuntu"/ in *Start* menu, find and install *Ubuntu* Microsoft Store app.
+
+  To be able to upgrade Ubuntu distribution in the future, select
+  *Ubuntu* without a version number (e.g. do *not* choose something
+  like /Ubuntu 18.04/).
+
+  The search result should look like either of the examples below.
+
+  [[./images/app-store-ubuntu-1.png]] [[./images/app-store-ubuntu-2.png]]
+
+* Ubuntu First Run
+
+  Run *Ubuntu* app from the start menu.
+
+  You will be asked to enter a new username and a new password which
+  have no relation to the Windows account.
+
+  #+BEGIN_EXAMPLE
+  Installing, this may take a few minutes...
+  Installation successful!
+  Please create a default UNIX user account. The username does not need to match your Windows username.
+  For more information, visit: https://aka.ms/wslusers
+  Enter new UNIX username: 
+  Enter new UNIX password:
+  Retype new UNIX password:
+  passwd: password updated successfully
+  Default UNIX user set to: johndoe
+  To run a command as administrator (user "root"), use "sudo <command>".
+  See "man sudo_root" for details.
+  #+END_EXAMPLE
+
+* Better terminal experience with *wsltty*
+
+  Download and install https://github.com/mintty/wsltty/releases
