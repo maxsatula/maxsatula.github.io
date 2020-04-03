@@ -63,6 +63,12 @@
   See "man sudo_root" for details.
   #+END_EXAMPLE
 
-* Better terminal experience with *wsltty*
+* Better terminal experience alternatives
 
-  Download and install https://github.com/mintty/wsltty/releases
+  You may optionally choose one of the following:
+
+  WSLtty  https://github.com/mintty/wsltty/releases
+
+  Windows Terminal https://www.microsoft.com/en-us/p/windows-terminal-preview/9n0dx20hk701
+
+  Hyper https://hyper.is/
