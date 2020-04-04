@@ -1,0 +1,56 @@
+#+TITLE: WSL with GUI
+
+  This document describes how to setup an X server on a Windows machine.
+
+  Read [[./WSL.org][WSL]] document first if WSL has not been installed yet.
+
+* Install X server
+
+  There are 2 options:
+
+  - *VcXsrv* https://sourceforge.net/projects/vcxsrv/ (recommended)
+
+  - *Xming* http://www.straightrunning.com/XmingNotes/
+
+  *VcXsrv* installer file name looks like
+  /vcxsrv-64.1.20.6.0.installer.exe/ (version number does not have to
+  match and can be higher), download it and run.
+
+* Configure
+
+  Create a file with ~.xlaunch~ extension somewhere,
+  e.g. ~config.xlaunch~ in Windows ~Documents~ folder.
+
+  #+begin_src xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <XLaunch WindowMode="MultiWindow"
+           ClientMode="NoClient"
+           LocalClient="False"
+           Display="0"
+           LocalProgram="" RemoteProgram="" RemotePassword="" PrivateKey="" RemoteHost="" RemoteUser="" XDMCPHost=""
+           XDMCPBroadcast="False"
+           XDMCPIndirect="False"
+           Clipboard="True"
+           ClipboardPrimary="True"
+           ExtraParams=""
+           Wgl="True"
+           DisableAC="False"
+           XDMCPTerminate="False"
+  />
+  #+end_src
+
+* Launch
+
+  The following lines can run in WSL command prompt to launch X server
+  as well as setup WSL to use it.
+
+  Adjust path and/or filename if ~.xlaunch~ file was created at
+  different location.
+
+  #+begin_src sh
+  (cd /mnt/c; /mnt/c/Windows/System32/cmd.exe /C '%USERPROFILE%\Documents\config.xlaunch')
+
+  export LIBGL_ALWAYS_INDIRECT=1
+  export DISPLAY=:0
+  #+end_src
+

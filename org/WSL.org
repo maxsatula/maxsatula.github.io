@@ -1,4 +1,4 @@
-#+TITLE: Windows Subsystem on Linux
+#+TITLE: Windows Subsystem for Linux
 
 * Check Windows version
 
@@ -72,3 +72,7 @@
   Windows Terminal https://www.microsoft.com/en-us/p/windows-terminal-preview/9n0dx20hk701
 
   Hyper https://hyper.is/
+
+* Next Steps
+
+  [[./WSL-with-GUI.org][WSL with GUI]]
