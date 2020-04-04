@@ -1,4 +1,6 @@
+(package-initialize)
 (require 'ox-publish)
+(require 'htmlize)
 
 (setq org-html-htmlize-output-type 'css)  ; default value is ‘inline-css’
 
