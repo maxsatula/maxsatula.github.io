@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-04-03 Fri 23:24 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WSL with GUI</title>
+<meta name="generator" content="Org mode" />
+<link rel="stylesheet" href="https://gongzhitaao.org/orgcss/org.css" type="text/css" /><script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">WSL with GUI</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgc00d0da">1. Install X server</a></li>
+<li><a href="#orgc45317b">2. Configure</a></li>
+<li><a href="#orga6ad3e1">3. Launch</a></li>
+</ul>
+</div>
+</div>
+<p>
+This document describes how to setup an X server on a Windows machine.
+</p>
+
+<p>
+Read <a href="./WSL.html">WSL</a> document first if WSL has not been installed yet.
+</p>
+
+<div id="outline-container-orgc00d0da" class="outline-2">
+<h2 id="orgc00d0da"><span class="section-number-2">1</span> Install X server</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+There are 2 options:
+</p>
+
+<ul class="org-ul">
+<li><b>VcXsrv</b> <a href="https://sourceforge.net/projects/vcxsrv/">https://sourceforge.net/projects/vcxsrv/</a> (recommended)</li>
+
+<li><b>Xming</b> <a href="http://www.straightrunning.com/XmingNotes/">http://www.straightrunning.com/XmingNotes/</a></li>
+</ul>
+
+<p>
+<b>VcXsrv</b> installer file name looks like
+<i>vcxsrv-64.1.20.6.0.installer.exe</i> (version number does not have to
+match and can be higher), download it and run.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgc45317b" class="outline-2">
+<h2 id="orgc45317b"><span class="section-number-2">2</span> Configure</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Create a file with <code>.xlaunch</code> extension somewhere,
+e.g. <code>config.xlaunch</code> in Windows <code>Documents</code> folder.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-xml"><span class="org-string"><span class="org-nxml-processing-instruction-delimiter">&lt;?</span></span><span class="org-string"><span class="org-nxml-processing-instruction-target">xml</span></span><span class="org-string"> </span><span class="org-string"><span class="org-nxml-processing-instruction-content">version="1.0" encoding="UTF-8"</span></span><span class="org-string"><span class="org-nxml-processing-instruction-delimiter">?&gt;</span></span>
+<span class="org-nxml-tag-delimiter">&lt;</span><span class="org-nxml-element-local-name">XLaunch</span> <span class="org-nxml-attribute-local-name">WindowMode</span>=<span class="org-string">"MultiWindow"</span>
+         <span class="org-nxml-attribute-local-name">ClientMode</span>=<span class="org-string">"NoClient"</span>
+         <span class="org-nxml-attribute-local-name">LocalClient</span>=<span class="org-string">"False"</span>
+         <span class="org-nxml-attribute-local-name">Display</span>=<span class="org-string">"0"</span>
+         <span class="org-nxml-attribute-local-name">LocalProgram</span>=<span class="org-string">""</span> <span class="org-nxml-attribute-local-name">RemoteProgram</span>=<span class="org-string">""</span> <span class="org-nxml-attribute-local-name">RemotePassword</span>=<span class="org-string">""</span> <span class="org-nxml-attribute-local-name">PrivateKey</span>=<span class="org-string">""</span> <span class="org-nxml-attribute-local-name">RemoteHost</span>=<span class="org-string">""</span> <span class="org-nxml-attribute-local-name">RemoteUser</span>=<span class="org-string">""</span> <span class="org-nxml-attribute-local-name">XDMCPHost</span>=<span class="org-string">""</span>
+         <span class="org-nxml-attribute-local-name">XDMCPBroadcast</span>=<span class="org-string">"False"</span>
+         <span class="org-nxml-attribute-local-name">XDMCPIndirect</span>=<span class="org-string">"False"</span>
+         <span class="org-nxml-attribute-local-name">Clipboard</span>=<span class="org-string">"True"</span>
+         <span class="org-nxml-attribute-local-name">ClipboardPrimary</span>=<span class="org-string">"True"</span>
+         <span class="org-nxml-attribute-local-name">ExtraParams</span>=<span class="org-string">""</span>
+         <span class="org-nxml-attribute-local-name">Wgl</span>=<span class="org-string">"True"</span>
+         <span class="org-nxml-attribute-local-name">DisableAC</span>=<span class="org-string">"False"</span>
+         <span class="org-nxml-attribute-local-name">XDMCPTerminate</span>=<span class="org-string">"False"</span>
+<span class="org-nxml-tag-slash">/</span><span class="org-nxml-tag-delimiter">&gt;</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orga6ad3e1" class="outline-2">
+<h2 id="orga6ad3e1"><span class="section-number-2">3</span> Launch</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+The following lines can run in WSL command prompt to launch X server
+as well as setup WSL to use it.
+</p>
+
+<p>
+Adjust path and/or filename if <code>.xlaunch</code> file was created at
+different location.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">(<span class="org-builtin">cd</span> /mnt/c; /mnt/c/Windows/System32/cmd.exe /C <span class="org-string">'%USERPROFILE%\Documents\config.xlaunch'</span>)
+
+<span class="org-builtin">export</span> <span class="org-variable-name">LIBGL_ALWAYS_INDIRECT</span>=1
+<span class="org-builtin">export</span> <span class="org-variable-name">DISPLAY</span>=:0
+</pre>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
