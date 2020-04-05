@@ -1,0 +1,185 @@
+#+TITLE: Terminal Session Logging
+
+  Read [[./WSL.org][WSL]] document first if you are using Microsoft Windows and WSL
+  has not been installed yet.
+
+* Tools
+
+  [[http://man7.org/linux/man-pages/man1/script.1.html][script(1)]] and [[http://man7.org/linux/man-pages/man1/scriptreplay.1.html][scriptreplay(1)]] are standard Linux utilities.
+
+  Optionally, ~congif~ to convert terminal recordings to animated
+  GIFs, available at https://github.com/lecram/congif.
+
+* Initial setup
+
+  Create a new directory to store logs, or a symbolic link to the actual
+  location of logs.
+
+  To create a new directory:
+
+  #+begin_src sh
+  mkdir -p ~/var/log
+  #+end_src
+
+  To create a symbolic link, which is a preferred method if you are
+  using WSL and want logs to be on a Windows filesystem (adjust target
+  directory in ~target_dir~ variable as needed):
+
+  #+begin_src sh
+  windows_drive=/mnt/c
+  windows_username=$($windows_drive/Windows/System32/cmd.exe /C echo %USERNAME% | tr -d "\r")
+  target_dir=$windows_drive/Users/$windows_username/Documents/Terminal\ Session\ Logs
+  mkdir ~/var "$target_dir"
+  ln -s "$target_dir" ~/var/log
+  #+end_src
+
+** (optional) Build ~congif~ Program
+
+   This step can be skipped if you do not want animated GIFs of the
+   recorded sessions.
+
+   #+begin_src sh
+   cd ~/gitprojects # adjust as necessary
+   git clone https://github.com/lecram/congif.git
+   cd congif
+   make
+   #+end_src
+
+   Optionally, repository with ~congif~ source code can be deleted
+   after compilation, if two files are preserved somewhere before
+   deletion:
+
+   - ~congif~ binary
+   - ~misc-fixed-6x10.mbf~ font
+
+* Script
+
+  Save the following code as ~~/bin/log~ or ~~/.local/bin/log~, that
+  is a wrapper around ~script~ utility to automate log file names
+  generation.
+
+  Adjust ~congif_dir~ to point to a directory with ~congif~ and
+  ~misc-fixed-6x10.mbf~ files as necessary, or set it to an empty
+  value if [[(optional) Build ~congif~ Program][~congif~ compilation]] step was skipped.
+
+  #+begin_src sh
+  #!/bin/sh
+
+  log_dir="$HOME/var/log"
+  congif_dir="$HOME/gitprojects/congif"
+
+  [ -n "$TMUX" ] &&
+      logfile=$(tmux display-message -p "$log_dir/%Y%m%dT%H%M%S-#{session_name}-#{window_index}-#{pane_index}") ||
+      logfile="$log_dir/$(date +%Y%m%dT%H%M%S)"
+
+  [ "$TERM" = "xterm-256color" ] && export TERM=linux-256color
+
+  if [ -n "$1" ]; then
+      /usr/bin/script --command "$*" "--timing=${logfile}.timing" "${logfile}.log"
+  else
+      /usr/bin/script "--timing=${logfile}.timing" "${logfile}.log"
+  fi
+
+  [ -n "$congif_dir" ] && (cd "$congif_dir"
+   ./congif -o "${logfile}.gif" "${logfile}.timing" "${logfile}.log")
+  #+end_src
+
+  Make it executable
+
+  #+begin_src sh
+  chmod +x ~/bin/log
+  #+end_src
+
+* Execution examples
+
+  Interactive shell
+
+  #+begin_src sh
+  ~/bin/log
+  #+end_src
+
+  Run a command and quit after it finishes
+
+  #+begin_src sh
+  ~/bin/log <command>
+  ~/bin/log ssh <server> -t
+  #+end_src
+
+* Replay example
+
+  Replay a session with double (x2) speed, and if nothing is happening
+  on the screen for longer than 3 seconds, reduce those delays to 3
+  seconds:
+
+  #+begin_src sh
+  scriptreplay -m 3 -d 2 -t ~/var/log/20200404t205836.timing ~/var/log/20200404t205836.log
+  #+end_src
+
+* (optional) Emacs integration
+
+  While a log file is open in an Emacs buffer, a couple functions from
+  the following file can be useful. The idea behind that is to read a
+  file with timing information in background and display how much time
+  elapsed for each part of the logged session being reviewed.
+
+  ~script-timing-at-point~ function can be bound to a hotkey or called
+  directly to display how much time elapsed from the log session start
+  to cursor location. If a range is selected, it displays a time span
+  between range boundaries.
+
+  ~script-timing-and-next-line~ is a convenience function to move
+  cursor down to the next line and display time elapsed at the new
+  position.
+
+  Save file ~script-timing.el~
+
+  #+begin_src elisp
+  (defun script--timing-data (filename)
+    (let ((totaltime 0) (totalpos 0))
+      (mapcar (lambda (x)
+                (let ((elem (mapcar #'string-to-number (split-string x " "))))
+                  (setq totaltime (+ totaltime (car elem))
+                        totalpos  (+ totalpos (cadr elem)))
+                  (append elem (list totaltime totalpos))))
+              (with-temp-buffer
+                (insert-file-contents (replace-regexp-in-string "\\.\\(out\\|log\\)$" ".timing" filename))
+                (split-string (buffer-string) "\n" t)))))
+  
+  (defun script--find-last (point filename)
+    (let (time
+          (adjusted-point (max 1 (- point -1 (save-excursion (goto-line 2) (point))))))
+      (dolist (elem (script--timing-data filename) time)
+        (if (< (- (nth 3 elem)
+                  (nth 1 elem))
+               adjusted-point)
+            (setq time (nth 2 elem))))))
+  
+  (defun script--format-time (seconds)
+    (cond
+     ((>= seconds 3600)
+      (format "%d:%02d:%05.2f"
+              (/ (floor seconds) 3600)
+              (mod (/ (floor seconds) 60) 60)
+              (mod seconds 60)))
+     ((>= seconds 60)
+      (format "%d:%05.2f"
+              (/ (floor seconds) 60)
+              (mod seconds 60)))
+     (t (format "%5.2f" seconds))))
+  
+  (defun script-timing-at-point ()
+    (interactive)
+    (if (use-region-p)
+        (message "Time interval %s"
+                 (script--format-time
+                  (- (script--find-last (region-end)       (buffer-file-name))
+                     (script--find-last (region-beginning) (buffer-file-name)))))
+      (message "Time from start %s"
+               (script--format-time
+                (script--find-last (point) (buffer-file-name))))))
+  
+  (defun script-timing-and-next-line ()
+    (interactive)
+    (next-line)
+    (script-timing-at-point))
+  #+end_src

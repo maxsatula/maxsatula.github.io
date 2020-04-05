@@ -76,3 +76,5 @@
 * Next Steps
 
   [[./WSL-with-GUI.org][WSL with GUI]]
+
+  [[./Terminal-Session-Logging.org][Terminal Session Logging]]
