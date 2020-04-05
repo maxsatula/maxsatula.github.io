@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-04-04 Sat 22:14 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Terminal Session Logging</title>
+<meta name="generator" content="Org mode" />
+<link rel="stylesheet" href="https://gongzhitaao.org/orgcss/org.css" type="text/css" /><script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Terminal Session Logging</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org9c315c4">1. Tools</a></li>
+<li><a href="#orgd8e1cac">2. Initial setup</a>
+<ul>
+<li><a href="#org8a065a7">2.1. (optional) Build <code>congif</code> Program</a></li>
+</ul>
+</li>
+<li><a href="#org39e731a">3. Script</a></li>
+<li><a href="#org0533b57">4. Execution examples</a></li>
+<li><a href="#org128927b">5. Replay example</a></li>
+<li><a href="#orgdccbd82">6. (optional) Emacs integration</a></li>
+</ul>
+</div>
+</div>
+<p>
+Read <a href="./WSL.html">WSL</a> document first if you are using Microsoft Windows and WSL
+has not been installed yet.
+</p>
+
+<div id="outline-container-org9c315c4" class="outline-2">
+<h2 id="org9c315c4"><span class="section-number-2">1</span> Tools</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+<a href="http://man7.org/linux/man-pages/man1/script.1.html">script(1)</a> and <a href="http://man7.org/linux/man-pages/man1/scriptreplay.1.html">scriptreplay(1)</a> are standard Linux utilities.
+</p>
+
+<p>
+Optionally, <code>congif</code> to convert terminal recordings to animated
+GIFs, available at <a href="https://github.com/lecram/congif">https://github.com/lecram/congif</a>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd8e1cac" class="outline-2">
+<h2 id="orgd8e1cac"><span class="section-number-2">2</span> Initial setup</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Create a new directory to store logs, or a symbolic link to the actual
+location of logs.
+</p>
+
+<p>
+To create a new directory:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">mkdir -p ~/var/log
+</pre>
+</div>
+
+<p>
+To create a symbolic link, which is a preferred method if you are
+using WSL and want logs to be on a Windows filesystem (adjust target
+directory in <code>target_dir</code> variable as needed):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-variable-name">windows_drive</span>=/mnt/c
+<span class="org-variable-name">windows_username</span>=$($<span class="org-variable-name">windows_drive</span>/Windows/System32/cmd.exe /C echo %USERNAME% | tr -d <span class="org-string">"\r"</span>)
+<span class="org-variable-name">target_dir</span>=$<span class="org-variable-name">windows_drive</span>/Users/$<span class="org-variable-name">windows_username</span>/Documents/Terminal<span class="org-string">\ </span>Session<span class="org-string">\ </span>Logs
+mkdir ~/var <span class="org-string">"$target_dir"</span>
+ln -s <span class="org-string">"$target_dir"</span> ~/var/log
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org8a065a7" class="outline-3">
+<h3 id="org8a065a7"><span class="section-number-3">2.1</span> (optional) Build <code>congif</code> Program</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+This step can be skipped if you do not want animated GIFs of the
+recorded sessions.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-builtin">cd</span> ~/gitprojects <span class="org-comment-delimiter"># </span><span class="org-comment">adjust as necessary</span>
+git clone https://github.com/lecram/congif.git
+<span class="org-builtin">cd</span> congif
+make
+</pre>
+</div>
+
+<p>
+Optionally, repository with <code>congif</code> source code can be deleted
+after compilation, if two files are preserved somewhere before
+deletion:
+</p>
+
+<ul class="org-ul">
+<li><code>congif</code> binary</li>
+<li><code>misc-fixed-6x10.mbf</code> font</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org39e731a" class="outline-2">
+<h2 id="org39e731a"><span class="section-number-2">3</span> Script</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Save the following code as <code>~/bin/log</code> or <code>~/.local/bin/log</code>, that
+is a wrapper around <code>script</code> utility to automate log file names
+generation.
+</p>
+
+<p>
+Adjust <code>congif_dir</code> to point to a directory with <code>congif</code> and
+<code>misc-fixed-6x10.mbf</code> files as necessary, or set it to an empty
+value if <a href="#org8a065a7"><code>congif</code> compilation</a> step was skipped.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">sh</span>
+
+<span class="org-variable-name">log_dir</span>=<span class="org-string">"$HOME/var/log"</span>
+<span class="org-variable-name">congif_dir</span>=<span class="org-string">"$HOME/gitprojects/congif"</span>
+
+[ -n <span class="org-string">"$TMUX"</span> ] &amp;&amp;
+    <span class="org-variable-name">logfile</span>=$(<span class="org-sh-quoted-exec">tmux</span> display-message -p <span class="org-string">"$log_dir/%Y%m%dT%H%M%S-#{session_name}-#{window_index}-#{pane_index}"</span>) ||
+    <span class="org-variable-name">logfile</span>=<span class="org-string">"$log_dir/$(</span><span class="org-sh-quoted-exec">date</span><span class="org-string"> +%Y%m%dT%H%M%S)"</span>
+
+[ <span class="org-string">"$TERM"</span> = <span class="org-string">"xterm-256color"</span> ] &amp;&amp; <span class="org-builtin">export</span> <span class="org-variable-name">TERM</span>=linux-256color
+
+<span class="org-keyword">if</span> [ -n <span class="org-string">"$1"</span> ]; <span class="org-keyword">then</span>
+    /usr/bin/script --command <span class="org-string">"$*"</span> <span class="org-string">"--timing=${logfile}.timing"</span> <span class="org-string">"${logfile}.log"</span>
+<span class="org-keyword">else</span>
+    /usr/bin/script <span class="org-string">"--timing=${logfile}.timing"</span> <span class="org-string">"${logfile}.log"</span>
+<span class="org-keyword">fi</span>
+
+[ -n <span class="org-string">"$congif_dir"</span> ] &amp;&amp; (<span class="org-builtin">cd</span> <span class="org-string">"$congif_dir"</span>
+ ./congif -o <span class="org-string">"${logfile}.gif"</span> <span class="org-string">"${logfile}.timing"</span> <span class="org-string">"${logfile}.log"</span>)
+</pre>
+</div>
+
+<p>
+Make it executable
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">chmod +x ~/bin/log
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0533b57" class="outline-2">
+<h2 id="org0533b57"><span class="section-number-2">4</span> Execution examples</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+Interactive shell
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">~/bin/log
+</pre>
+</div>
+
+<p>
+Run a command and quit after it finishes
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">~/bin/log &lt;command&gt;
+~/bin/log ssh &lt;server&gt; -t
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org128927b" class="outline-2">
+<h2 id="org128927b"><span class="section-number-2">5</span> Replay example</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+Replay a session with double (x2) speed, and if nothing is happening
+on the screen for longer than 3 seconds, reduce those delays to 3
+seconds:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">scriptreplay -m 3 -d 2 -t ~/var/log/20200404t205836.timing ~/var/log/20200404t205836.log
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgdccbd82" class="outline-2">
+<h2 id="orgdccbd82"><span class="section-number-2">6</span> (optional) Emacs integration</h2>
+<div class="outline-text-2" id="text-6">
+<p>
+While a log file is open in an Emacs buffer, a couple functions from
+the following file can be useful. The idea behind that is to read a
+file with timing information in background and display how much time
+elapsed for each part of the logged session being reviewed.
+</p>
+
+<p>
+<code>script-timing-at-point</code> function can be bound to a hotkey or called
+directly to display how much time elapsed from the log session start
+to cursor location. If a range is selected, it displays a time span
+between range boundaries.
+</p>
+
+<p>
+<code>script-timing-and-next-line</code> is a convenience function to move
+cursor down to the next line and display time elapsed at the new
+position.
+</p>
+
+<p>
+Save file <code>script-timing.el</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-elisp">(<span class="org-keyword">defun</span> <span class="org-function-name">script--timing-data</span> (filename)
+  (<span class="org-keyword">let</span> ((totaltime 0) (totalpos 0))
+    (mapcar (<span class="org-keyword">lambda</span> (x)
+              (<span class="org-keyword">let</span> ((elem (mapcar #'string-to-number (split-string x <span class="org-string">" "</span>))))
+                (<span class="org-keyword">setq</span> totaltime (+ totaltime (car elem))
+                      totalpos  (+ totalpos (cadr elem)))
+                (append elem (list totaltime totalpos))))
+            (<span class="org-keyword">with-temp-buffer</span>
+              (insert-file-contents (replace-regexp-in-string <span class="org-string">"\\.</span><span class="org-string"><span class="org-regexp-grouping-backslash">\\</span></span><span class="org-string"><span class="org-regexp-grouping-construct">(</span></span><span class="org-string">out</span><span class="org-string"><span class="org-regexp-grouping-backslash">\\</span></span><span class="org-string"><span class="org-regexp-grouping-construct">|</span></span><span class="org-string">log</span><span class="org-string"><span class="org-regexp-grouping-backslash">\\</span></span><span class="org-string"><span class="org-regexp-grouping-construct">)</span></span><span class="org-string">$"</span> <span class="org-string">".timing"</span> filename))
+              (split-string (buffer-string) <span class="org-string">"\n"</span> t)))))
+
+(<span class="org-keyword">defun</span> <span class="org-function-name">script--find-last</span> (point filename)
+  (<span class="org-keyword">let</span> (time
+        (adjusted-point (max 1 (- point -1 (<span class="org-keyword">save-excursion</span> (goto-line 2) (point))))))
+    (<span class="org-keyword">dolist</span> (elem (script--timing-data filename) time)
+      (<span class="org-keyword">if</span> (&lt; (- (nth 3 elem)
+                (nth 1 elem))
+             adjusted-point)
+          (<span class="org-keyword">setq</span> time (nth 2 elem))))))
+
+(<span class="org-keyword">defun</span> <span class="org-function-name">script--format-time</span> (seconds)
+  (<span class="org-keyword">cond</span>
+   ((&gt;= seconds 3600)
+    (format <span class="org-string">"%d:%02d:%05.2f"</span>
+            (/ (floor seconds) 3600)
+            (mod (/ (floor seconds) 60) 60)
+            (mod seconds 60)))
+   ((&gt;= seconds 60)
+    (format <span class="org-string">"%d:%05.2f"</span>
+            (/ (floor seconds) 60)
+            (mod seconds 60)))
+   (t (format <span class="org-string">"%5.2f"</span> seconds))))
+
+(<span class="org-keyword">defun</span> <span class="org-function-name">script-timing-at-point</span> ()
+  (<span class="org-keyword">interactive</span>)
+  (<span class="org-keyword">if</span> (use-region-p)
+      (message <span class="org-string">"Time interval %s"</span>
+               (script--format-time
+                (- (script--find-last (region-end)       (buffer-file-name))
+                   (script--find-last (region-beginning) (buffer-file-name)))))
+    (message <span class="org-string">"Time from start %s"</span>
+             (script--format-time
+              (script--find-last (point) (buffer-file-name))))))
+
+(<span class="org-keyword">defun</span> <span class="org-function-name">script-timing-and-next-line</span> ()
+  (<span class="org-keyword">interactive</span>)
+  (next-line)
+  (script-timing-at-point))
+</pre>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
