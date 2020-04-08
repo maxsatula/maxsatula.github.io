@@ -1,0 +1,236 @@
+#+TITLE: SSH Reverse Tunnel
+
+#+begin_quote
+DISCLAIMER: Author is not responsible for any consequences of either
+proper or improper use of the document or its parts, including but not
+limited to job loss, lawsuits, criminal charges, imprisonment, capital
+punishment, or any other types of penalties, etc. Use at your own
+risk, guided by your own moral compass and sense of ethics. The
+document describes /how/ things can be done, and does not suggest
+/where/ and/or /when/ this is applicable. Unless you are the owner of
+both networks, first consult with the owner(s) regarding permission to
+proceed.
+#+end_quote
+
+Say there are two networks, let's refer them as /WORK/ and /HOME/ for
+simplicity, however technically they do not have to be literally work
+and home network.
+
+The goal is to get access from /HOME/ to /WORK/.
+
+- both /WORK/ and /HOME/ are connected to the Internet
+
+- /WORK/ network may have no exposed ports or services to the outside
+
+- /HOME/ network has an SSH service exposed to a public IP
+
+This document describes how to set up access from /HOME/ to /WORK/
+without having a VPN access. From the outside it looks like an
+outbound encrypted connection from /WORK/ to /HOME/, no incoming
+connections to /WORK/, however the configuration described in the
+document eventually allows access in the reverse direction, from
+/HOME/ to /WORK/.
+
+All the steps are to be performed in /WORK/ network, except the last
+[[Connect][connect]] phase, which runs from /HOME/ network.
+
+* Docker Image for SSH Server
+
+  /WORK/ network needs to run an SSH Server somewhere, the easiest way
+  is to run it in a docker container.
+
+  Create a directory for docker context. Put 2 files in that directory:
+
+  ~Dockerfile~
+
+  #+begin_src dockerfile
+  FROM sickp/alpine-sshd
+  RUN apk --no-cache add autossh
+  COPY entrypoint.sh /
+  #+end_src
+
+  ~entrypoint.sh~
+
+  #+begin_src sh
+  #!/bin/ash
+
+  (cd /
+   ([ -n "$TARBALL" ]    &&
+        echo "$TARBALL" |
+            base64 -d   |
+            gunzip       ||
+            cat)        |
+   tar xf - --no-same-owner               \
+       ./etc/ssh/ssh_host_ed25519_key     \
+       ./etc/ssh/ssh_host_ed25519_key.pub \
+       ./etc/ssh/sshd_config              \
+       ./root/.ssh/config                 \
+       ./root/.ssh/id_ed25519             \
+       ./root/.ssh/id_ed25519.pub         \
+       ./root/.ssh/known_hosts            \
+       ./root/.ssh/authorized_keys
+  )
+
+  autossh -M 0 -f -T -N dest
+
+  # do not detach (-D), log to stderr (-e), passthrough other arguments
+  exec /usr/sbin/sshd -D -e "$@"
+  #+end_src
+
+  Then build a docker image
+
+  #+begin_src sh
+  docker build --tag alpine-sshd-auto .
+  #+end_src
+
+* Configuration
+
+  Create a ~config~ directory somewhere. All the following paths in
+  this section are subdirectories and files in ~config~ directory, so
+  make this directory current.
+
+** SSH Server Configuration
+
+   Create ~etc/ssh/sshd_config~ file with the following content
+
+   #+begin_example
+   HostKey                 /etc/ssh/ssh_host_ed25519_key
+   PermitRootLogin         prohibit-password
+   AuthorizedKeysFile      .ssh/authorized_keys
+   PasswordAuthentication  no
+   AllowTcpForwarding      yes
+   GatewayPorts            no
+   X11Forwarding           no
+   Subsystem               sftp    /usr/lib/ssh/sftp-server
+   #+end_example
+
+** SSH Client Configuration
+
+   Create ~root/.ssh/config~ file with the following content
+
+   #+begin_example
+   IdentitiesOnly  yes
+   Host dest
+        IdentityFile         /root/.ssh/id_ed25519
+        HostName             dns-name-of-your-home-server
+        Port                 your-port-if-not-22
+        User                 your-home-username
+        RemoteForward        2222 localhost:22
+        ServerAliveInterval  900
+        ServerAliveCountMax  2
+   #+end_example
+
+   Replace ~dns-name-of-your-home-server~, ~your-port-if-not-22~ (or
+   remove the ~Port~ line completely if port is 22), and
+   ~your-home-username~ with meaninful values.
+
+   Please keep ~dest~ verbatim, as ~entrypoint.sh~ file refers to it.
+
+   Port 2222 can optionally be changed to something else.
+
+** Host Key
+
+   #+begin_src sh
+   ssh-keygen -o -a 100 -t ed25519 -N '' -f etc/ssh/ssh_host_ed25519_key
+   #+end_src
+
+   This will produce 2 files
+   ~etc/ssh/ssh_host_ed25519_key~
+   ~etc/ssh/ssh_host_ed25519_key.pub~
+
+** SSH Client Key
+
+   #+begin_src sh
+   ssh-keygen -o -a 100 -t ed25519 -N '' -f root/.ssh/id_ed25519
+   #+end_src
+
+   This will produce 2 files
+
+   ~root/.ssh/id_ed25519~
+   ~root/.ssh/id_ed25519.pub~
+
+   Add content of ~root/.ssh/id_ed25519.pub~ to ~authorized_keys~ file
+   on your /HOME/ SSH server exposed to Internet, prepended with a
+   text shown below:
+
+   #+begin_example
+   command="echo 'Port forwarding only account.'",restrict,port-forwarding ssh-ed25519 your-public-key
+   #+end_example
+
+** Known Host
+
+   Create a file ~root/.ssh/known_hosts~ with a line
+
+   #+begin_example
+   dns-name-of-your-home-server ssh-ed25519 your-home-server-hostkey
+   #+end_example
+
+   or, if bound to a public IP on a port other than standard 22
+
+   #+begin_example
+   [dns-name-of-your-home-server]:port ssh-ed25519 your-home-server-hostkey
+   #+end_example
+
+   /your-home-server-hostkey/ value can be retreived from
+   ~/etc/ssh/ssh_host_ed25519_key.pub~ file content at /HOME/ SSH
+   server.
+
+** Authorized Keys
+
+   Create ~root/.ssh/authorized_keys~ file and populate with /HOME/
+   key(s) you want have access to /WORK/ network.
+
+* Run
+
+  Assuming a current working directory is one level up from ~config~
+  directory:
+
+  #+begin_src sh
+  docker run --detach --rm \
+         --env TARBALL="$(cd config; tar cf - . | gzip -9 | base64)" \
+         alpine-sshd-auto
+  #+end_src
+
+* Connect
+
+  From /HOME/ network, can now connect to a docker container (remember
+  to change 2222 if a different value was specified in ~RemoteForward~
+  in ~root/.ssh/config~ file earlier):
+
+  #+begin_src sh
+  ssh root@localhost:2222
+  #+end_src
+
+  To have access to other network resources besides a docker
+  container, e.g to RDP on ~some-machine-with-rdp~:
+
+  #+begin_src sh
+  ssh -L 3389:some-machine-with-rdp:3389 root@localhost:2222
+  #+end_src
+
+  Then you can run Remote Desktop client to ~localhost:3389~.
+
+  To have a SOCKS proxy, on port 2000 for example:
+
+  #+begin_src sh
+  ssh -D 2OOO root@localhost:2222
+  #+end_src
+
+  Obviously, multiple port forwardings can be done at the same time,
+  as many as needed.
+
+* Stop
+
+  Simply stop a container at /WORK/ network to stop access.
+
+  List running containers:
+
+  #+begin_src sh
+  docker ps
+  #+end_src
+
+  Stop a container
+
+  #+begin_src sh
+  docker stop container-name-or-id
+  #+end_src
