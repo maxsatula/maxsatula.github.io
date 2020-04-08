@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-04-08 Wed 00:19 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SSH Reverse Tunnel</title>
+<meta name="generator" content="Org mode" />
+<link rel="stylesheet" href="https://gongzhitaao.org/orgcss/org.css" type="text/css" /><script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">SSH Reverse Tunnel</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgb511cde">1. Docker Image for SSH Server</a></li>
+<li><a href="#org4e737bf">2. Configuration</a>
+<ul>
+<li><a href="#org764df18">2.1. SSH Server Configuration</a></li>
+<li><a href="#orgf69048b">2.2. SSH Client Configuration</a></li>
+<li><a href="#org67c61e5">2.3. Host Key</a></li>
+<li><a href="#orga587ac1">2.4. SSH Client Key</a></li>
+<li><a href="#org4d1eeb2">2.5. Known Host</a></li>
+<li><a href="#orgeea9c0c">2.6. Authorized Keys</a></li>
+</ul>
+</li>
+<li><a href="#orge2e9aa4">3. Run</a></li>
+<li><a href="#org0905881">4. Connect</a></li>
+<li><a href="#org48823c8">5. Stop</a></li>
+</ul>
+</div>
+</div>
+<blockquote>
+<p>
+DISCLAIMER: Author is not responsible for any consequences of either
+proper or improper use of the document or its parts, including but not
+limited to job loss, lawsuits, criminal charges, imprisonment, capital
+punishment, or any other types of penalties, etc. Use at your own
+risk, guided by your own moral compass and sense of ethics. The
+document describes <i>how</i> things can be done, and does not suggest
+<i>where</i> and/or <i>when</i> this is applicable. Unless you are the owner of
+both networks, first consult with the owner(s) regarding permission to
+proceed.
+</p>
+</blockquote>
+
+<p>
+Say there are two networks, let's refer them as <i>WORK</i> and <i>HOME</i> for
+simplicity, however technically they do not have to be literally work
+and home network.
+</p>
+
+<p>
+The goal is to get access from <i>HOME</i> to <i>WORK</i>.
+</p>
+
+<ul class="org-ul">
+<li>both <i>WORK</i> and <i>HOME</i> are connected to the Internet</li>
+
+<li><i>WORK</i> network may have no exposed ports or services to the outside</li>
+
+<li><i>HOME</i> network has an SSH service exposed to a public IP</li>
+</ul>
+
+<p>
+This document describes how to set up access from <i>HOME</i> to <i>WORK</i>
+without having a VPN access. From the outside it looks like an
+outbound encrypted connection from <i>WORK</i> to <i>HOME</i>, no incoming
+connections to <i>WORK</i>, however the configuration described in the
+document eventually allows access in the reverse direction, from
+<i>HOME</i> to <i>WORK</i>.
+</p>
+
+<p>
+All the steps are to be performed in <i>WORK</i> network, except the last
+<a href="#org0905881">connect</a> phase, which runs from <i>HOME</i> network.
+</p>
+
+<div id="outline-container-orgb511cde" class="outline-2">
+<h2 id="orgb511cde"><span class="section-number-2">1</span> Docker Image for SSH Server</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+<i>WORK</i> network needs to run an SSH Server somewhere, the easiest way
+is to run it in a docker container.
+</p>
+
+<p>
+Create a directory for docker context. Put 2 files in that directory:
+</p>
+
+<p>
+<code>Dockerfile</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-dockerfile">FROM sickp/alpine-sshd
+RUN apk --no-cache add autossh
+COPY entrypoint.sh /
+</pre>
+</div>
+
+<p>
+<code>entrypoint.sh</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">ash</span>
+
+(<span class="org-builtin">cd</span> /
+ ([ -n <span class="org-string">"$TARBALL"</span> ]    &amp;&amp;
+      <span class="org-builtin">echo</span> <span class="org-string">"$TARBALL"</span> |
+          base64 -d   |
+          gunzip       ||
+          cat)        |
+ tar xf - --no-same-owner               <span class="org-sh-escaped-newline">\</span>
+     ./etc/ssh/ssh_host_ed25519_key     <span class="org-sh-escaped-newline">\</span>
+     ./etc/ssh/ssh_host_ed25519_key.pub <span class="org-sh-escaped-newline">\</span>
+     ./etc/ssh/sshd_config              <span class="org-sh-escaped-newline">\</span>
+     ./root/.ssh/config                 <span class="org-sh-escaped-newline">\</span>
+     ./root/.ssh/id_ed25519             <span class="org-sh-escaped-newline">\</span>
+     ./root/.ssh/id_ed25519.pub         <span class="org-sh-escaped-newline">\</span>
+     ./root/.ssh/known_hosts            <span class="org-sh-escaped-newline">\</span>
+     ./root/.ssh/authorized_keys
+)
+
+autossh -M 0 -f -T -N dest
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">do not detach (-D), log to stderr (-e), passthrough other arguments</span>
+<span class="org-keyword">exec</span> /usr/sbin/sshd -D -e <span class="org-string">"$@"</span>
+</pre>
+</div>
+
+<p>
+Then build a docker image
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">docker build --tag alpine-sshd-auto .
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4e737bf" class="outline-2">
+<h2 id="org4e737bf"><span class="section-number-2">2</span> Configuration</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Create a <code>config</code> directory somewhere. All the following paths in
+this section are subdirectories and files in <code>config</code> directory, so
+make this directory current.
+</p>
+</div>
+
+<div id="outline-container-org764df18" class="outline-3">
+<h3 id="org764df18"><span class="section-number-3">2.1</span> SSH Server Configuration</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Create <code>etc/ssh/sshd_config</code> file with the following content
+</p>
+
+<pre class="example">
+HostKey                 /etc/ssh/ssh_host_ed25519_key
+PermitRootLogin         prohibit-password
+AuthorizedKeysFile      .ssh/authorized_keys
+PasswordAuthentication  no
+AllowTcpForwarding      yes
+GatewayPorts            no
+X11Forwarding           no
+Subsystem               sftp    /usr/lib/ssh/sftp-server
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgf69048b" class="outline-3">
+<h3 id="orgf69048b"><span class="section-number-3">2.2</span> SSH Client Configuration</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+Create <code>root/.ssh/config</code> file with the following content
+</p>
+
+<pre class="example">
+IdentitiesOnly  yes
+Host dest
+     IdentityFile         /root/.ssh/id_ed25519
+     HostName             dns-name-of-your-home-server
+     Port                 your-port-if-not-22
+     User                 your-home-username
+     RemoteForward        2222 localhost:22
+     ServerAliveInterval  900
+     ServerAliveCountMax  2
+</pre>
+
+<p>
+Replace <code>dns-name-of-your-home-server</code>, <code>your-port-if-not-22</code> (or
+remove the <code>Port</code> line completely if port is 22), and
+<code>your-home-username</code> with meaninful values.
+</p>
+
+<p>
+Please keep <code>dest</code> verbatim, as <code>entrypoint.sh</code> file refers to it.
+</p>
+
+<p>
+Port 2222 can optionally be changed to something else.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org67c61e5" class="outline-3">
+<h3 id="org67c61e5"><span class="section-number-3">2.3</span> Host Key</h3>
+<div class="outline-text-3" id="text-2-3">
+<div class="org-src-container">
+<pre class="src src-sh">ssh-keygen -o -a 100 -t ed25519 -N <span class="org-string">''</span> -f etc/ssh/ssh_host_ed25519_key
+</pre>
+</div>
+
+<p>
+This will produce 2 files
+<code>etc/ssh/ssh_host_ed25519_key</code>
+<code>etc/ssh/ssh_host_ed25519_key.pub</code>
+</p>
+</div>
+</div>
+
+<div id="outline-container-orga587ac1" class="outline-3">
+<h3 id="orga587ac1"><span class="section-number-3">2.4</span> SSH Client Key</h3>
+<div class="outline-text-3" id="text-2-4">
+<div class="org-src-container">
+<pre class="src src-sh">ssh-keygen -o -a 100 -t ed25519 -N <span class="org-string">''</span> -f root/.ssh/id_ed25519
+</pre>
+</div>
+
+<p>
+This will produce 2 files
+</p>
+
+<p>
+<code>root/.ssh/id_ed25519</code>
+<code>root/.ssh/id_ed25519.pub</code>
+</p>
+
+<p>
+Add content of <code>root/.ssh/id_ed25519.pub</code> to <code>authorized_keys</code> file
+on your <i>HOME</i> SSH server exposed to Internet, prepended with a
+text shown below:
+</p>
+
+<pre class="example">
+command="echo 'Port forwarding only account.'",restrict,port-forwarding ssh-ed25519 your-public-key
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org4d1eeb2" class="outline-3">
+<h3 id="org4d1eeb2"><span class="section-number-3">2.5</span> Known Host</h3>
+<div class="outline-text-3" id="text-2-5">
+<p>
+Create a file <code>root/.ssh/known_hosts</code> with a line
+</p>
+
+<pre class="example">
+dns-name-of-your-home-server ssh-ed25519 your-home-server-hostkey
+</pre>
+
+<p>
+or, if bound to a public IP on a port other than standard 22
+</p>
+
+<pre class="example">
+[dns-name-of-your-home-server]:port ssh-ed25519 your-home-server-hostkey
+</pre>
+
+<p>
+<i>your-home-server-hostkey</i> value can be retreived from
+<code>/etc/ssh/ssh_host_ed25519_key.pub</code> file content at <i>HOME</i> SSH
+server.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgeea9c0c" class="outline-3">
+<h3 id="orgeea9c0c"><span class="section-number-3">2.6</span> Authorized Keys</h3>
+<div class="outline-text-3" id="text-2-6">
+<p>
+Create <code>root/.ssh/authorized_keys</code> file and populate with <i>HOME</i>
+key(s) you want have access to <i>WORK</i> network.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orge2e9aa4" class="outline-2">
+<h2 id="orge2e9aa4"><span class="section-number-2">3</span> Run</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Assuming a current working directory is one level up from <code>config</code>
+directory:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">docker run --detach --rm <span class="org-sh-escaped-newline">\</span>
+       --env <span class="org-variable-name">TARBALL</span>=<span class="org-string">"$(</span><span class="org-sh-quoted-exec">cd</span><span class="org-string"> config; tar cf - . | gzip -9 | base64)"</span> <span class="org-sh-escaped-newline">\</span>
+       alpine-sshd-auto
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0905881" class="outline-2">
+<h2 id="org0905881"><span class="section-number-2">4</span> Connect</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+From <i>HOME</i> network, can now connect to a docker container (remember
+to change 2222 if a different value was specified in <code>RemoteForward</code>
+in <code>root/.ssh/config</code> file earlier):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">ssh root@localhost:2222
+</pre>
+</div>
+
+<p>
+To have access to other network resources besides a docker
+container, e.g to RDP on <code>some-machine-with-rdp</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">ssh -L 3389:some-machine-with-rdp:3389 root@localhost:2222
+</pre>
+</div>
+
+<p>
+Then you can run Remote Desktop client to <code>localhost:3389</code>.
+</p>
+
+<p>
+To have a SOCKS proxy, on port 2000 for example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">ssh -D 2OOO root@localhost:2222
+</pre>
+</div>
+
+<p>
+Obviously, multiple port forwardings can be done at the same time,
+as many as needed.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org48823c8" class="outline-2">
+<h2 id="org48823c8"><span class="section-number-2">5</span> Stop</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+Simply stop a container at <i>WORK</i> network to stop access.
+</p>
+
+<p>
+List running containers:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">docker ps
+</pre>
+</div>
+
+<p>
+Stop a container
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">docker stop container-name-or-id
+</pre>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
